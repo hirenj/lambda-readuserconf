@@ -21,7 +21,7 @@ if (config.region) {
 const readUserConf = function(event,context) {
   let grantdata = grants.readGrantConfig(bucket_name);
   grantdata.then( grants => {
-    return grants;
+    console.log(grants);
   });
   grantdata.then(grants.putGrants.bind(null,grants_table)).then( () => {
     context.succeed('OK');

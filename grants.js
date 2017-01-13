@@ -8,51 +8,60 @@ var s3 = new AWS.S3();
 var table_promises = {};
 
 var make_items = function(grant) {
-  grant.Name = grant.Name;
+  grant.id = grant.id;
   grant.valid_to = grant.valid_to || 9007199254740991;
   grant.valid_from = grant.valid_from || 0;
   grant.users = (grant.users && grant.users.length > 0) ? grant.users : ['none'];
   grant.superusers = (grant.superusers && grant.superusers.length > 0) ? grant.superusers : ['none'];;
   grant.proteins = grant.proteins || '*';
   grant.datasets = grant.datasets || 'none/none';
-  return {'PutRequest' : { 'Item': grant } };
+  return { 'Item': grant };
 };
 
 var get_existing_grants = function(table) {
   var params = {
     TableName : table,
-    ProjectionExpression : '#name',
+    ProjectionExpression : '#name,#users,valid_to',
     ExpressionAttributeNames:{
-      "#name" : "Name"
+      "#name" : "id",
+      "#users" : "users"
     }
   };
   return dynamo.scan(params).promise().then( (data) => {
-    return( (data.Items || []).map(function(item) { return item.Name; }));
+    return( (data.Items || []).filter( item => item[0] !== 'none' ));
   });
 };
 
 var put_grants = function(table,grants) {
   return get_existing_grants(table).then( existing => {
-    let toadd = grants.map(function(grant) { return grant.Name; });
+    let toadd = grants.map(function(grant) { return grant.id; });
     existing.forEach(function(current) {
-      if (toadd.indexOf(current) < 0) {
+      if (toadd.indexOf(current.id) < 0) {
         console.log("Need to remove ",current);
-        grants.push({ "Name" : current });
+        delete current.users;
+        delete current.superusers;
+        grants.push(current);
       }
     });
     let params = {};
-    params.RequestItems = {};
-    params.RequestItems[table] = grants.map(make_items);
-    dynamo.batchWrite(params).promise();
+    return Promise.all(grants.map(make_items).map( (item) => {
+      let params = item;
+      params.TableName = table;
+      return dynamo.put(params).promise();
+    }));
   });
 };
 
 const retrieve_json = function(bucket,key) {
   let params = {
     Bucket: bucket,
-    Key: 'conf/groups'
+    Key: key
   };
+  if (key.match(/\/$/)) {
+    return Promise.resolve();
+  }
   return s3.getObject(params).promise().then( (data) => {
+    console.log(data.Body.toString());
     let json = JSON.parse(data.Body.toString());
     return { 'Key' : key, 'json' : json };
   });
@@ -61,10 +70,12 @@ const retrieve_json = function(bucket,key) {
 const read_group_config = function(bucket) {
   let params = {
     Bucket: bucket,
-    Key: 'conf/groups'
+    Prefix: 'conf/groups'
   };
+  console.log(params);
   return s3.listObjectsV2(params).promise().then( keys => {
     let group_keys = keys.Contents.map((object) => object.Key );
+    console.log("Groups",group_keys);
     return Promise.all(group_keys.map(retrieve_json.bind(null,bucket)));
   });
 };
@@ -72,10 +83,12 @@ const read_group_config = function(bucket) {
 const read_grant_config = function(bucket) {
   let params = {
     Bucket: bucket,
-    Key: 'conf/grants'
+    Prefix: 'conf/grants'
   };
+  console.log(params);
   return s3.listObjectsV2(params).promise().then( keys => {
     let grant_keys = keys.Contents.map((object) => object.Key );
+    console.log("Grants",grant_keys);
     return Promise.all(grant_keys.map(retrieve_json.bind(null,bucket)));
   });
 };
@@ -89,7 +102,7 @@ const sample_group = {
   'users' : ['email@domain']
 };
 const sample_grant = {
-  'Name' : 'Some grant',
+  'id' : 'Some grant',
   'valid_from' : '',
   'valid_to' : '',
   'users' : ['email@domain']
@@ -104,13 +117,13 @@ const populate_grant_users = function(grant,groups) {
 };
 
 const populate_grants = function(bucket) {
-  Promsie.all([read_group_config(bucket),read_grant_config(bucket) ]).then( configs => {
-    let groups = configs[0];
-    let grants = configs[1];
+  return Promise.all([read_group_config(bucket),read_grant_config(bucket) ]).then( configs => {
+    let groups = configs[0].filter( (val) => val ).map( (block) => block.json );
+    let grants = configs[1].filter( (val) => val ).map( (block) => block.json );
     grants.forEach((grant) => populate_grant_users(grant,groups) );
     return grants;
   });
 };
 
-exports.readGrantConfig = read_grant_config;
+exports.readGrantConfig = populate_grants;
 exports.putGrants = put_grants;
