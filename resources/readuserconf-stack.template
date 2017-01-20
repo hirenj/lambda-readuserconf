@@ -88,7 +88,6 @@
             "Action":"lambda:InvokeFunction",
             "FunctionName": { "Fn::GetAtt": [ "readUserConf", "Arn" ]},
             "Principal": "sns.amazonaws.com",
-            "SourceAccount": {"Ref" : "AWS::AccountId" },
             "SourceArn": { "Ref" : "ConfChangesTopic" }
         }
     },
