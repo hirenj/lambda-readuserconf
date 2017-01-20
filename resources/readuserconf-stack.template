@@ -76,7 +76,6 @@
       "Type" : "AWS::SNS::Topic",
       "Properties" : {
         "DisplayName" : "Configuration Changes",
-        "TopicName" : "ConfChangesTopic",
         "Subscription" : [{
           "Endpoint" : { "Fn::GetAtt": [ "readUserConf", "Arn" ]},
           "Protocol" : "lambda"
