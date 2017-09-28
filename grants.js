@@ -7,12 +7,14 @@ var s3 = new AWS.S3();
 
 var table_promises = {};
 
+var to_lower = name => name ? name.toLowerCase() : name;
+
 var make_items = function(grant) {
   grant.id = grant.id;
   grant.valid_to = grant.valid_to || 9007199254740991;
   grant.valid_from = grant.valid_from || 0;
-  grant.users = (grant.users && grant.users.length > 0) ? grant.users : ['none'];
-  grant.superusers = (grant.superusers && grant.superusers.length > 0) ? grant.superusers : ['none'];;
+  grant.users = (grant.users && grant.users.length > 0) ? grant.users.map(to_lower) : ['none'];
+  grant.superusers = (grant.superusers && grant.superusers.length > 0) ? grant.superusers.map(to_lower) : ['none'];;
   grant.proteins = grant.proteins || '*';
   grant.datasets = grant.datasets || 'none/none';
   return { 'Item': grant };
