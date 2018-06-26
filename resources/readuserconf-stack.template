@@ -14,7 +14,7 @@
         "Description" : "readUserConf",
         "Handler" : "index.readUserConf",
         "Role" : {"Fn::GetAtt" : ["LambdaReadUserConfRole", "Arn"] },
-        "Runtime" : "nodejs4.3",
+        "Runtime" : "nodejs6.10",
         "MemorySize" : 128,
         "Timeout" : 300
       }
