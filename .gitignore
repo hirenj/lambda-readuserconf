@@ -1,3 +1,5 @@
 dist
-resources
 node_modules
+*.grant
+*.group
+resources.conf.json
