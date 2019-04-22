@@ -16,7 +16,7 @@ Resources:
     Properties:
       ManagedPolicyArns:
         - !Ref 'WriteGrants'
-        - !Ref 'ReadValidGroups'
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -24,31 +24,29 @@ Resources:
             Principal:
               Service: lambda.amazonaws.com
             Action: sts:AssumeRole
-  ReadValidGroups:
-    Type: AWS::IAM::ManagedPolicy
-    Properties:
-      Description: ReadValidGroups
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Sid: ReadValidGroupObjects
-            Effect: Allow
-            Action:
-              - s3:GetObject
-            Resource:
-              - !Sub 'arn:aws:s3:::${AWS::StackName}-gator/conf/groups/*'
-              - !Sub 'arn:aws:s3:::${AWS::StackName}-gator/conf/grants/*'
-          - Sid: ListValidGroupObjects
-            Effect: Allow
-            Action:
-              - s3:ListBucket
-            Resource:
-              - !Sub 'arn:aws:s3:::${AWS::StackName}-gator'
-            Condition:
-              ForAnyValue:StringEquals:
-                s3:prefix:
-                  - conf/groups
-                  - conf/grants
+      Policies:
+        - PolicyName: ReadValidGroups
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Sid: ReadValidGroupObjects
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource:
+                  - !Sub 'arn:aws:s3:::${AWS::StackName}-gator/conf/groups/*'
+                  - !Sub 'arn:aws:s3:::${AWS::StackName}-gator/conf/grants/*'
+              - Sid: ListValidGroupObjects
+                Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource:
+                  - !Sub 'arn:aws:s3:::${AWS::StackName}-gator'
+                Condition:
+                  ForAnyValue:StringEquals:
+                    s3:prefix:
+                      - conf/groups
+                      - conf/grants
   ConfChangesTopic:
     Type: AWS::SNS::Topic
     Properties:
@@ -63,19 +61,4 @@ Resources:
       FunctionName: !GetAtt 'readUserConf.Arn'
       Principal: sns.amazonaws.com
       SourceArn: !Ref 'ConfChangesTopic'
-  readUserConfLogWriterPolicy:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyName: readUserConfLogWriterPolicy
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Action:
-              - logs:CreateLogGroup
-              - logs:CreateLogStream
-              - logs:PutLogEvents
-            Resource: arn:aws:logs:*:*:*
-      Roles:
-        - !Ref 'LambdaReadUserConfRole'
 Outputs: {}
