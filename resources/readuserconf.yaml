@@ -8,7 +8,7 @@ Resources:
       Description: readUserConf
       Handler: index.readUserConf
       Role: !GetAtt 'LambdaReadUserConfRole.Arn'
-      Runtime: nodejs8.10
+      Runtime: !Ref nodejsversion
       MemorySize: 128
       Timeout: 300
   LambdaReadUserConfRole:
